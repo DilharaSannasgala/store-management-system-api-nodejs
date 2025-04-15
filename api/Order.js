@@ -105,7 +105,14 @@ router.get('/all-orders', authMiddleware, async (req, res) => {
     try {
         const orders = await Order.find({ deletedAt: 0 })
             .populate('customer')
-            .populate('products.product');
+            .populate({
+                path: 'items.stock',
+                populate: {
+                    path: 'product',
+                    model: 'Product'
+                }
+            });
+
         return res.json({ status: "SUCCESS", data: orders });
     } catch (err) {
         console.error(err);
@@ -113,12 +120,19 @@ router.get('/all-orders', authMiddleware, async (req, res) => {
     }
 });
 
+
 // Get All Orders including soft-deleted
 router.get('/all-orders/with-deleted', authMiddleware, async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('customer')
-            .populate('products.product');
+        .populate('customer')
+        .populate({
+            path: 'items.stock',
+            populate: {
+                path: 'product',
+                model: 'Product'
+            }
+        });
         return res.json({ status: "SUCCESS", data: orders });
     } catch (err) {
         console.error(err);
@@ -137,8 +151,14 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     try {
         const order = await Order.findOne({ _id: id, deletedAt: 0 })
-            .populate('customer')
-            .populate('products.product');
+        .populate('customer')
+        .populate({
+            path: 'items.stock',
+            populate: {
+                path: 'product',
+                model: 'Product'
+            }
+        });
         if (!order) {
             return res.json({ status: "FAILED", message: "Order not found or has been deleted" });
         }
