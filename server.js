@@ -26,12 +26,12 @@ mongoose.connect(process.env.MONGODB_URI, {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
-const UserRouter = require('./api/User');
-const ProductRouter = require('./api/Product');
-const CategoryRouter = require('./api/Category');
-const CustomerRouter = require('./api/Customer');
-const OrderRouter = require('./api/Order');
-const StockRouter = require('./api/Stock');
+const UserRouter = require('./controllers/User');
+const ProductRouter = require('./controllers/Product');
+const CategoryRouter = require('./routes/categoryRoutes');
+const CustomerRouter = require('./controllers/Customer');
+const OrderRouter = require('./controllers/Order');
+const StockRouter = require('./controllers/Stock');
 const authMiddleware = require('./middleware/auth');
 
 app.use('/user', UserRouter);
