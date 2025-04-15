@@ -4,7 +4,9 @@ const Order = require('../model/Order');
 const Customer = require('../model/Customer');
 const Product = require('../model/Product');
 const Stock = require('../model/Stock');
+const User = require('../model/User');
 const authMiddleware = require('../middleware/auth');
+const sendLowStockAlert = require('../utils/email');
 const mongoose = require('mongoose');
 
 // Add Order route with authentication
@@ -45,13 +47,35 @@ router.post('/add-order', authMiddleware, async (req, res) => {
                     message: `Insufficient stock for ${stock.product.name}. Available: ${stock.quantity}`
                 });
             }
-
+            
             // Deduct the quantity from stock
             stock.quantity -= item.quantity;
             await stock.save({ session });
+            
+            // Check if stock fell **below** threshold AFTER deduction
+            if (stock.quantity < stock.lowStockAlert) {
+                const users = await User.find();
+                const userEmails = users.map(user => user.email);
+            
+                const productData = await Product.findById(stock.product);
+                if (productData) {
+                    sendLowStockAlert(productData.name, stock.batchNumber, stock.quantity, userEmails);
+                }
+            }
         }
 
-        const finalTotalAmount = totalAmount;
+        let finalTotalAmount = totalAmount;
+
+        // Fallback if frontend doesn’t pass totalAmount properly
+        if (!finalTotalAmount || isNaN(finalTotalAmount)) {
+            finalTotalAmount = 0;
+            for (let item of items) {
+                const stock = await Stock.findById(item.stock).populate('product').session(session);
+                if (stock && stock.product && stock.product.price) {
+                    finalTotalAmount += stock.product.price * item.quantity;
+                }
+            }
+        }
 
         // Create new order
         const newOrder = new Order({
@@ -74,7 +98,7 @@ router.post('/add-order', authMiddleware, async (req, res) => {
         session.endSession();
         return res.json({ status: "FAILED", message: "Order creation failed due to server error." });
     }
-})
+});
 
 // Get All Orders (excluding soft-deleted)
 router.get('/all-orders', authMiddleware, async (req, res) => {
