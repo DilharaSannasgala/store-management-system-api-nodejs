@@ -212,9 +212,12 @@ router.delete('/permanent-delete-stock/:id', authMiddleware, async (req, res) =>
 });
 
 // Check All Stocks for Low Stock and Send Alerts
-router.get('/check-low-stock', authMiddleware, async (req, res) => {
+router.get('/check/low-stock', authMiddleware, async (req, res) => {
     try {
-        const stocks = await Stock.find({ deletedAt: 0 });
+        // Get all active stock items and populate product info
+        const stocks = await Stock.find({ deletedAt: 0 }).populate('product');
+
+        // Filter out stocks where quantity is less than or equal to the alert threshold
         const lowStockItems = stocks.filter(stock => stock.quantity <= stock.lowStockAlert);
 
         if (lowStockItems.length > 0) {
@@ -224,7 +227,12 @@ router.get('/check-low-stock', authMiddleware, async (req, res) => {
 
             // Send email for each low stock item
             for (const stock of lowStockItems) {
-                sendLowStockAlert(stock.product.name, stock.quantity, userEmails);
+                sendLowStockAlert(
+                    stock.product?.name || 'Unknown Product',
+                    stock.batchNumber,
+                    stock.quantity,
+                    userEmails
+                );
             }
 
             return res.json({ status: "SUCCESS", message: "Low stock alerts sent to users" });
@@ -237,6 +245,7 @@ router.get('/check-low-stock', authMiddleware, async (req, res) => {
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
 });
+
 
 
 module.exports = router;
