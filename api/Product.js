@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../model/Product');
+const Category = require('../model/Category');
 const authMiddleware = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
@@ -36,44 +37,48 @@ router.post('/add-product', authMiddleware, upload.array('images', 5), async (re
     console.log('Request body:', req.body);
     console.log('Files:', req.files);
 
-    const { name, productCode, description, size, color, price, category } = req.body;
+    const { name, description, category } = req.body;
 
-    if (!name || !productCode || !description || !size || !color || !price || !category) {
-        return res.status(400).json({ status: "FAILED", message: "All fields are required" });
+    if (!name || !description || !category) {
+        return res.status(400).json({ status: "FAILED", message: "Name, description, and category are required" });
     }
 
-    // Ensure the category ID is valid
     if (!mongoose.Types.ObjectId.isValid(category)) {
         return res.status(400).json({ status: "FAILED", message: "Invalid category ID" });
     }
 
-    // Handle file uploads
-    const imageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
-
     try {
-        // Check if product code already exists
-        const existingProduct = await Product.findOne({ 
-            productCode, 
-            deletedAt: 0 // Check only among active products
-        });
-        
-        if (existingProduct) {
-            return res.status(400).json({ 
-                status: "FAILED", 
-                message: "Product code already exists" 
-            });
+        // Get category name
+        const categoryData = await Category.findOne({ _id: category, deletedAt: 0 });
+        if (!categoryData) {
+            return res.status(400).json({ status: "FAILED", message: "Category not found" });
         }
+
+        // ===== Generate product code here =====
+        const rawPrefix = categoryData.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
+        const regex = new RegExp(`^${rawPrefix}\\d{3}$`);
+
+        const productsWithPrefix = await Product.find({ productCode: { $regex: regex }, deletedAt: 0 });
+
+        const maxNumber = productsWithPrefix.reduce((max, product) => {
+            const match = product.productCode.match(/\d{3}$/);
+            const num = match ? parseInt(match[0], 10) : 0;
+            return Math.max(max, num);
+        }, 0);
+
+        const newCode = `${rawPrefix}${(maxNumber + 1).toString().padStart(3, '0')}`;
+        // =======================================
+
+        // Image handling
+        const imageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
 
         const newProduct = new Product({
             name,
-            productCode,
+            productCode: newCode,
             description,
-            size,
-            color,
-            price,
             category,
             images: imageUrls,
-            deletedAt: 0 // Explicitly set to 0 for active products
+            deletedAt: 0
         });
 
         await newProduct.save();
