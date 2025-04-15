@@ -29,7 +29,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const UserRouter = require('./controllers/User');
 const ProductRouter = require('./controllers/Product');
 const CategoryRouter = require('./routes/categoryRoutes');
-const CustomerRouter = require('./controllers/Customer');
+const CustomerRouter = require('./routes/customerRoutes');
 const OrderRouter = require('./controllers/Order');
 const StockRouter = require('./controllers/Stock');
 const authMiddleware = require('./middleware/auth');
