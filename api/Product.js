@@ -96,7 +96,7 @@ router.get('/all-products', authMiddleware, async (req, res) => {
     try {
         const products = await Product.find({ deletedAt: 0 })
             .populate('category')
-            .sort({ createdAt: -1 }); // Optional: newest first
+            .sort({ createdAt: -1 }); //newest first
         return res.json({ status: "SUCCESS", data: products });
     } catch (err) {
         console.error(err);
@@ -150,67 +150,36 @@ router.get('/product/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Update Product route
 router.put('/update-product/:id', authMiddleware, upload.array('images', 5), async (req, res) => {
     const { id } = req.params;
-    const { name, productCode, description, size, color, price, category } = req.body;
+    const { name, description, category } = req.body;
 
-    // Convert price to a number
-    const parsedPrice = parseFloat(price);
-
-    if (!name || !productCode || !description || !size || !color || isNaN(parsedPrice) || !category) {
-        return res.status(400).json({ status: "FAILED", message: "All fields are required and price must be a number" });
+    // Validate required fields
+    if (!name || !description || !category) {
+        return res.status(400).json({ status: "FAILED", message: "Name, description, and category are required" });
     }
 
-    if (parsedPrice <= 0) {
-        return res.status(400).json({ status: "FAILED", message: "Price must be a positive number" });
-    }
-
-    // Ensure the category ID is valid
+    // Ensure category ID is valid
     if (!mongoose.Types.ObjectId.isValid(category)) {
         return res.status(400).json({ status: "FAILED", message: "Invalid category ID" });
     }
 
     try {
-        // Check if product exists and is not deleted
-        const product = await Product.findOne({ 
-            _id: id,
-            deletedAt: 0
-        });
-        
+        // Find the product
+        const product = await Product.findOne({ _id: id, deletedAt: 0 });
         if (!product) {
             return res.status(404).json({ status: "FAILED", message: "Product not found or has been deleted" });
         }
 
-        // Check if the updated product code already exists on another product
-        if (productCode !== product.productCode) {
-            const existingProduct = await Product.findOne({ 
-                productCode, 
-                _id: { $ne: id },
-                deletedAt: 0
-            });
-            
-            if (existingProduct) {
-                return res.status(400).json({ 
-                    status: "FAILED", 
-                    message: "Product code already exists on another product" 
-                });
-            }
-        }
-
-        // Handle file uploads if any
+        // Handle image upload
         let imageUrls = product.images;
         if (req.files && req.files.length > 0) {
             imageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
         }
 
-        // Update product
+        // Update fields
         product.name = name;
-        product.productCode = productCode;
         product.description = description;
-        product.size = size;
-        product.color = color;
-        product.price = parsedPrice;
         product.category = category;
         if (req.files && req.files.length > 0) {
             product.images = imageUrls;
@@ -218,11 +187,19 @@ router.put('/update-product/:id', authMiddleware, upload.array('images', 5), asy
 
         await product.save();
 
-        return res.json({ status: "SUCCESS", message: "Product updated successfully", data: product });
+        return res.json({
+            status: "SUCCESS",
+            message: "Product updated successfully",
+            data: product
+        });
 
     } catch (err) {
         console.error(err);
-        return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
+        return res.status(500).json({
+            status: "FAILED",
+            message: "Internal server error",
+            error: err.message
+        });
     }
 });
 
