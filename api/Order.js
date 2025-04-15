@@ -3,48 +3,78 @@ const router = express.Router();
 const Order = require('../model/Order');
 const Customer = require('../model/Customer');
 const Product = require('../model/Product');
+const Stock = require('../model/Stock');
 const authMiddleware = require('../middleware/auth');
 const mongoose = require('mongoose');
 
 // Add Order route with authentication
 router.post('/add-order', authMiddleware, async (req, res) => {
-    const { customerId, products, totalAmount } = req.body;
-
-    if (!customerId || !products || !totalAmount) {
-        return res.json({ status: "FAILED", message: "All fields are required" });
-    }
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
     try {
-        // Validate customer ID
-        const customer = await Customer.findById(customerId);
+        const { customerId, items, totalAmount } = req.body;
+
+        if (!customerId || !items || !Array.isArray(items) || items.length === 0 || totalAmount === undefined) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.json({ status: "FAILED", message: "All fields are required" });
+        }
+
+        const customer = await Customer.findById(customerId).session(session);
         if (!customer) {
+            await session.abortTransaction();
+            session.endSession();
             return res.json({ status: "FAILED", message: "Customer not found" });
         }
 
-        // Validate product IDs and quantities
-        for (let item of products) {
-            const product = await Product.findById(item.product);
-            if (!product) {
-                return res.json({ status: "FAILED", message: `Product not found for ID: ${item.product}` });
+        // Validate stock and reduce quantity
+        for (let item of items) {
+            const stock = await Stock.findById(item.stock).populate('product').session(session);
+            if (!stock) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.json({ status: "FAILED", message: `Stock not found: ${item.stock}` });
             }
+
+            if (stock.quantity < item.quantity) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.json({
+                    status: "FAILED",
+                    message: `Insufficient stock for ${stock.product.name}. Available: ${stock.quantity}`
+                });
+            }
+
+            // Deduct the quantity from stock
+            stock.quantity -= item.quantity;
+            await stock.save({ session });
         }
 
+        const finalTotalAmount = totalAmount;
+
+        // Create new order
         const newOrder = new Order({
             customer: customerId,
-            products,
-            totalAmount,
+            items,
+            totalAmount: finalTotalAmount,
             deletedAt: 0
         });
 
-        await newOrder.save();
+        await newOrder.save({ session });
 
-        return res.json({ status: "SUCCESS", message: "Order added successfully", data: newOrder });
+        await session.commitTransaction();
+        session.endSession();
 
-    } catch (err) {
-        console.error(err);
-        return res.json({ status: "FAILED", message: "Internal server error" });
+        return res.json({ status: "SUCCESS", message: "Order placed successfully", data: newOrder });
+
+    } catch (error) {
+        console.error("Transaction failed:", error);
+        await session.abortTransaction();
+        session.endSession();
+        return res.json({ status: "FAILED", message: "Order creation failed due to server error." });
     }
-});
+})
 
 // Get All Orders (excluding soft-deleted)
 router.get('/all-orders', authMiddleware, async (req, res) => {
