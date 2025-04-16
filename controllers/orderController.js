@@ -4,7 +4,7 @@ const Product = require('../model/Product');
 const Stock = require('../model/Stock');
 const User = require('../model/User');
 const mongoose = require('mongoose');
-const sendLowStockAlert = require('../utils/email');
+const emailService = require('../services/emailService');
 
 // Controller methods for order operations
 const orderController = {
@@ -58,7 +58,7 @@ const orderController = {
                 
                     const productData = await Product.findById(stock.product);
                     if (productData) {
-                        sendLowStockAlert(productData.name, stock.batchNumber, stock.quantity, userEmails);
+                        emailService.sendLowStockAlert(productData.name, stock.batchNumber, stock.quantity, userEmails);
                     }
                 }
             }

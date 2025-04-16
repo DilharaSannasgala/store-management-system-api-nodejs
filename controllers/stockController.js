@@ -1,7 +1,7 @@
 const Stock = require('../model/Stock');
 const User = require('../model/User');
 const Product = require('../model/Product');
-const sendLowStockAlert = require('../utils/email');
+const emailService = require('../services/emailService');
 
 /**
  * Create a new stock entry
@@ -133,7 +133,7 @@ const updateStock = async (req, res) => {
             }
 
             // Send email to all users
-            sendLowStockAlert(productData.name, stock.batchNumber, stock.quantity, userEmails);
+            emailService.sendLowStockAlert(productData.name, stock.batchNumber, stock.quantity, userEmails);
         }
 
         return res.json({ status: "SUCCESS", message: "Stock updated", data: stock });
@@ -241,7 +241,7 @@ const checkLowStock = async (req, res) => {
 
             // Send email for each low stock item
             for (const stock of lowStockItems) {
-                sendLowStockAlert(
+                emailService.sendLowStockAlert(
                     stock.product?.name || 'Unknown Product',
                     stock.batchNumber,
                     stock.quantity,

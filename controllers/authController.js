@@ -1,9 +1,9 @@
 const User = require('../model/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const generateToken = require('../utils/generateToken');
+const emailService = require('../services/emailService');
 
 /**
  * User signup/registration
@@ -116,33 +116,22 @@ const forgetPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 3600000;
         await user.save();
 
-        // Send email with the reset token
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL,
-                pass: process.env.EMAIL_PASSWORD
-            }
-        });
-
-        const mailOptions = {
-            to: user.email,
-            from: process.env.EMAIL,
-            subject: 'Password Reset',
-            text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
-                   Please click on the following link, or paste this into your browser to complete the process:\n\n
-                   http://${req.headers.host}/reset-password/${resetToken}\n\n
-                   If you did not request this, please ignore this email and your password will remain unchanged.\n`
-        };
-
-        transporter.sendMail(mailOptions, (err, info) => {
-            if (err) {
-                console.error('Error sending email:', err);
-                return res.json({ status: "FAILED", message: "Error sending email" });
-            }
-            console.log('Email sent:', info.response);
-            res.json({ status: "SUCCESS", message: "A reset email has been sent to " + user.email });
-        });        
+        try {
+            // Send password reset email
+            await emailService.sendPasswordResetEmail(
+                user.email, 
+                resetToken, 
+                req.headers.host
+            );
+            
+            return res.json({ 
+                status: "SUCCESS", 
+                message: "A reset email has been sent to " + user.email 
+            });
+        } catch (emailError) {
+            console.error('Error sending email:', emailError);
+            return res.json({ status: "FAILED", message: "Error sending email" });
+        }
 
     } catch (err) {
         console.error(err);
