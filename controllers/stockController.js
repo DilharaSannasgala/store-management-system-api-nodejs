@@ -1,13 +1,12 @@
-const express = require('express');
-const router = express.Router();
 const Stock = require('../model/Stock');
 const User = require('../model/User');
 const Product = require('../model/Product');
-const authMiddleware = require('../middleware/auth');
 const sendLowStockAlert = require('../utils/email');
 
-// Create Stock
-router.post('/add-stock', authMiddleware, async (req, res) => {
+/**
+ * Create a new stock entry
+ */
+const addStock = async (req, res) => {
     const { product, quantity, size, price, supplier } = req.body;
 
     if (!product || quantity == null || !size || price == null || !supplier) {
@@ -51,10 +50,12 @@ router.post('/add-stock', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Get All Stocks
-router.get('/all-stocks', authMiddleware, async (req, res) => {
+/**
+ * Get all non-deleted stocks
+ */
+const getAllStocks = async (req, res) => {
     try {
         const stocks = await Stock.find({ deletedAt: 0 }).populate('product');
         return res.json({ status: "SUCCESS", data: stocks });
@@ -62,10 +63,12 @@ router.get('/all-stocks', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Get All Stocks (including deleted ones)
-router.get('/all-stocks/with-deleted', authMiddleware, async (req, res) => {
+/**
+ * Get all stocks including deleted ones
+ */
+const getAllStocksWithDeleted = async (req, res) => {
     try {
         // Find all stocks, including soft-deleted ones
         const stocks = await Stock.find({}).populate('product');
@@ -74,10 +77,12 @@ router.get('/all-stocks/with-deleted', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-})
+};
 
-// Get Single Stock
-router.get('/:id', authMiddleware, async (req, res) => {
+/**
+ * Get a single stock by ID
+ */
+const getStockById = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -90,10 +95,12 @@ router.get('/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Update Stock
-router.put('/update-stock/:id', authMiddleware, async (req, res) => {
+/**
+ * Update an existing stock
+ */
+const updateStock = async (req, res) => {
     const { id } = req.params;
     const { quantity, price, size, lowStockAlert, supplier } = req.body;
 
@@ -135,10 +142,12 @@ router.put('/update-stock/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Soft Delete Stock
-router.delete('/delete-stock/:id', authMiddleware, async (req, res) => {
+/**
+ * Soft delete a stock
+ */
+const softDeleteStock = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -161,11 +170,12 @@ router.delete('/delete-stock/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-
-// Restore Soft Deleted Stock
-router.post('/restore-stock/:id', authMiddleware, async (req, res) => {
+/**
+ * Restore a soft-deleted stock
+ */
+const restoreStock = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -188,10 +198,12 @@ router.post('/restore-stock/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Permanently Delete Stock
-router.delete('/permanent-delete-stock/:id', authMiddleware, async (req, res) => {
+/**
+ * Permanently delete a stock
+ */
+const permanentlyDeleteStock = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -209,10 +221,12 @@ router.delete('/permanent-delete-stock/:id', authMiddleware, async (req, res) =>
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Check All Stocks for Low Stock and Send Alerts
-router.get('/check/low-stock', authMiddleware, async (req, res) => {
+/**
+ * Check all stocks for low stock and send alerts
+ */
+const checkLowStock = async (req, res) => {
     try {
         // Get all active stock items and populate product info
         const stocks = await Stock.find({ deletedAt: 0 }).populate('product');
@@ -244,8 +258,16 @@ router.get('/check/low-stock', authMiddleware, async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-
-
-module.exports = router;
+module.exports = {
+    addStock,
+    getAllStocks,
+    getAllStocksWithDeleted,
+    getStockById,
+    updateStock,
+    softDeleteStock,
+    restoreStock,
+    permanentlyDeleteStock,
+    checkLowStock
+};

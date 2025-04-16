@@ -31,7 +31,7 @@ const ProductRouter = require('./controllers/productController');
 const CategoryRouter = require('./routes/categoryRoutes');
 const CustomerRouter = require('./routes/customerRoutes');
 const OrderRouter = require('./routes/orderRoutes');
-const StockRouter = require('./controllers/Stock');
+const StockRouter = require('./routes/stockRoutes');
 const authMiddleware = require('./middleware/auth');
 
 app.use('/user', UserRouter);
