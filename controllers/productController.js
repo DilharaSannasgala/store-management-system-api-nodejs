@@ -1,38 +1,12 @@
-const express = require('express');
-const router = express.Router();
 const Product = require('../model/Product');
 const Category = require('../model/Category');
-const authMiddleware = require('../middleware/auth');
-const multer = require('multer');
-const path = require('path');
 const mongoose = require('mongoose');
+const path = require('path');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-
-// Add file filter to only accept images
-const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed!'), false);
-    }
-};
-
-const upload = multer({ 
-    storage: storage,
-    fileFilter: fileFilter
-});
-
-// Add Product route with authentication
-router.post('/add-product', authMiddleware, upload.array('images', 5), async (req, res) => {
+/**
+ * Add a new product
+ */
+const addProduct = async (req, res) => {
     console.log('Request headers:', req.headers);
     console.log('Request body:', req.body);
     console.log('Files:', req.files);
@@ -54,7 +28,7 @@ router.post('/add-product', authMiddleware, upload.array('images', 5), async (re
             return res.status(400).json({ status: "FAILED", message: "Category not found" });
         }
 
-        // ===== Generate product code here =====
+        // Generate product code
         const rawPrefix = categoryData.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
         const regex = new RegExp(`^${rawPrefix}\\d{3}$`);
 
@@ -67,7 +41,6 @@ router.post('/add-product', authMiddleware, upload.array('images', 5), async (re
         }, 0);
 
         const newCode = `${rawPrefix}${(maxNumber + 1).toString().padStart(3, '0')}`;
-        // =======================================
 
         // Image handling
         const imageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
@@ -89,10 +62,12 @@ router.post('/add-product', authMiddleware, upload.array('images', 5), async (re
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Get All Products route (excluding soft deleted products)
-router.get('/all-products', authMiddleware, async (req, res) => {
+/**
+ * Get all non-deleted products
+ */
+const getAllProducts = async (req, res) => {
     try {
         const products = await Product.find({ deletedAt: 0 })
             .populate('category')
@@ -102,10 +77,12 @@ router.get('/all-products', authMiddleware, async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Optional: Get All Products including deleted ones
-router.get('/all-products/with-deleted', authMiddleware, async (req, res) => {
+/**
+ * Get all products including deleted ones
+ */
+const getAllProductsWithDeleted = async (req, res) => {
     try {
         const products = await Product.find()
             .populate('category')
@@ -115,10 +92,12 @@ router.get('/all-products/with-deleted', authMiddleware, async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Get One Product route (excluding deleted products)
-router.get('/product/:id', authMiddleware, async (req, res) => {
+/**
+ * Get a single product by ID
+ */
+const getProductById = async (req, res) => {
     const { id } = req.params;
 
     // Validate product ID
@@ -148,9 +127,12 @@ router.get('/product/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-router.put('/update-product/:id', authMiddleware, upload.array('images', 5), async (req, res) => {
+/**
+ * Update an existing product
+ */
+const updateProduct = async (req, res) => {
     const { id } = req.params;
     const { name, description, category } = req.body;
 
@@ -201,10 +183,12 @@ router.put('/update-product/:id', authMiddleware, upload.array('images', 5), asy
             error: err.message
         });
     }
-});
+};
 
-// Soft Delete Product route
-router.delete('/delete-product/:id', authMiddleware, async (req, res) => {
+/**
+ * Soft delete a product
+ */
+const softDeleteProduct = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -228,10 +212,12 @@ router.delete('/delete-product/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Restore a soft-deleted product
-router.post('/restore-product/:id', authMiddleware, async (req, res) => {
+/**
+ * Restore a soft-deleted product
+ */
+const restoreProduct = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -269,10 +255,12 @@ router.post('/restore-product/:id', authMiddleware, async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Permanently delete a product (admin only, if needed)
-router.delete('/permanently-delete-product/:id', authMiddleware, async (req, res) => {
+/**
+ * Permanently delete a product
+ */
+const permanentlyDeleteProduct = async (req, res) => {
     const { id } = req.params;
 
     try {
@@ -288,20 +276,15 @@ router.delete('/permanently-delete-product/:id', authMiddleware, async (req, res
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
-});
+};
 
-// Error handling middleware for multer and other errors
-router.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        // A Multer error occurred when uploading
-        console.error('Multer error:', err);
-        return res.status(400).json({ status: "FAILED", message: `Upload error: ${err.message}` });
-    } else if (err) {
-        // An unknown error occurred
-        console.error('Unknown error:', err);
-        return res.status(500).json({ status: "FAILED", message: `Server error: ${err.message}` });
-    }
-    next();
-});
-
-module.exports = router;
+module.exports = {
+    addProduct,
+    getAllProducts,
+    getAllProductsWithDeleted,
+    getProductById,
+    updateProduct,
+    softDeleteProduct,
+    restoreProduct,
+    permanentlyDeleteProduct
+};

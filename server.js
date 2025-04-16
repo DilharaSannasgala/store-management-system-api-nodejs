@@ -26,8 +26,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
-const UserRouter = require('./controllers/User');
-const ProductRouter = require('./controllers/productController');
+const UserRouter = require('./routes/authRoutes');
+const ProductRouter = require('./routes/productRoutes');
 const CategoryRouter = require('./routes/categoryRoutes');
 const CustomerRouter = require('./routes/customerRoutes');
 const OrderRouter = require('./routes/orderRoutes');

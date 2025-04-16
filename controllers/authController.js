@@ -1,5 +1,3 @@
-const express = require('express');
-const router = express.Router();
 const User = require('../model/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -7,8 +5,10 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 const generateToken = require('../utils/generateToken');
 
-// Signup route
-router.post('/signup', async (req, res) => {
+/**
+ * User signup/registration
+ */
+const signup = async (req, res) => {
     let { name, email, password, dateOfBirth } = req.body;
     name = name.trim();
     email = email.trim();
@@ -52,17 +52,18 @@ router.post('/signup', async (req, res) => {
 
         await newUser.save();
 
-    return res.json({ status: "SUCCESS", message: "Signup successful", data: { user: newUser } });
-
+        return res.json({ status: "SUCCESS", message: "Signup successful", data: { user: newUser } });
 
     } catch (err) {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Sign-in route
-router.post('/signin', async (req, res) => {
+/**
+ * User signin/login
+ */
+const signin = async (req, res) => {
     let { email, password } = req.body;
     email = email.trim();
     password = password.trim();
@@ -91,10 +92,12 @@ router.post('/signin', async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Forget Password route
-router.post('/forget-password', async (req, res) => {
+/**
+ * Request password reset
+ */
+const forgetPassword = async (req, res) => {
     const { email } = req.body;
 
     if (!email) {
@@ -145,10 +148,12 @@ router.post('/forget-password', async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-// Reset Password route
-router.post('/reset-password/:token', async (req, res) => {
+/**
+ * Reset password with token
+ */
+const resetPassword = async (req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
@@ -179,9 +184,12 @@ router.post('/reset-password/:token', async (req, res) => {
         console.error(err);
         return res.json({ status: "FAILED", message: "Internal server error" });
     }
-});
+};
 
-router.get('/verify-token', async (req, res) => {
+/**
+ * Verify JWT token
+ */
+const verifyToken = async (req, res) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
@@ -213,6 +221,12 @@ router.get('/verify-token', async (req, res) => {
             message: 'Invalid token.' 
         });
     }
-});
+};
 
-module.exports = router;
+module.exports = {
+    signup,
+    signin,
+    forgetPassword,
+    resetPassword,
+    verifyToken
+};
