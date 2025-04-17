@@ -71,7 +71,7 @@ const getAllProducts = async (req, res) => {
     try {
         const products = await Product.find({ deletedAt: 0 })
             .populate('category')
-            .sort({ createdAt: -1 }); //newest first
+            .sort({ createdAt: -1 });
         return res.json({ status: "SUCCESS", data: products });
     } catch (err) {
         console.error(err);
@@ -134,7 +134,7 @@ const getProductById = async (req, res) => {
  */
 const updateProduct = async (req, res) => {
     const { id } = req.params;
-    const { name, description, category } = req.body;
+    const { name, description, category, existingImages, removedImages } = req.body;
 
     // Validate required fields
     if (!name || !description || !category) {
@@ -154,18 +154,23 @@ const updateProduct = async (req, res) => {
         }
 
         // Handle image upload
-        let imageUrls = product.images;
+        let newImageUrls = [];
         if (req.files && req.files.length > 0) {
-            imageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
+            newImageUrls = req.files.map(file => `http://${req.headers.host}/uploads/${file.filename}`);
         }
+
+        // Parse existing and removed images
+        const parsedExistingImages = JSON.parse(existingImages);
+        const parsedRemovedImages = JSON.parse(removedImages);
+
+        // Merge new images with existing images and remove the removed images
+        const mergedImages = [...parsedExistingImages, ...newImageUrls].filter(image => !parsedRemovedImages.includes(image));
 
         // Update fields
         product.name = name;
         product.description = description;
         product.category = category;
-        if (req.files && req.files.length > 0) {
-            product.images = imageUrls;
-        }
+        product.images = mergedImages;
 
         await product.save();
 
@@ -184,6 +189,7 @@ const updateProduct = async (req, res) => {
         });
     }
 };
+
 
 /**
  * Soft delete a product
