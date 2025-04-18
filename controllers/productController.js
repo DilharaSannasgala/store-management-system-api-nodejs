@@ -32,7 +32,8 @@ const addProduct = async (req, res) => {
         const rawPrefix = categoryData.name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase();
         const regex = new RegExp(`^${rawPrefix}\\d{3}$`);
 
-        const productsWithPrefix = await Product.find({ productCode: { $regex: regex }, deletedAt: 0 });
+        // Find all products with the same prefix, including soft-deleted ones
+        const productsWithPrefix = await Product.find({ productCode: { $regex: regex } });
 
         const maxNumber = productsWithPrefix.reduce((max, product) => {
             const match = product.productCode.match(/\d{3}$/);
