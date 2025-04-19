@@ -28,6 +28,9 @@ router.post('/restore-product/:id', authMiddleware, productController.restorePro
 // Permanently delete a product (admin only, if needed)
 router.delete('/permanently-delete-product/:id', authMiddleware, productController.permanentlyDeleteProduct);
 
+// Get count of active products
+router.get('/product-counts', authMiddleware, productController.countProducts);
+
 // Error handling middleware for multer and other errors
 router.use(handleMulterError);
 

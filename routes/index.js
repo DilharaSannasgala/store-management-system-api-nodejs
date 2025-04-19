@@ -4,6 +4,7 @@ const CategoryRouter = require('./categoryRoutes');
 const CustomerRouter = require('./customerRoutes');
 const OrderRouter = require('./orderRoutes');
 const StockRouter = require('./stockRoutes');
+const DashboardRouter = require('./dashBoardRoutes');
 const authMiddleware = require('../middleware/auth');
 
 module.exports = (app) => {
@@ -14,6 +15,7 @@ module.exports = (app) => {
     app.use('/customer', CustomerRouter);
     app.use('/order', OrderRouter);
     app.use('/stock', StockRouter);
+    app.use('/dashboard', DashboardRouter);
 
     // Protected Test Route
     app.get('/protected', authMiddleware, (req, res) => {

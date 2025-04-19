@@ -283,6 +283,68 @@ const permanentlyDeleteProduct = async (req, res) => {
         console.error(err);
         return res.status(500).json({ status: "FAILED", message: "Internal server error", error: err.message });
     }
+    
+};
+
+/**
+ * Count products with optional filters
+ */
+const countProducts = async (req, res) => {
+    try {
+        const { countDeleted } = req.query;
+        
+        // Base counts
+        const activeCount = await Product.countDocuments({ deletedAt: 0 });
+        
+        // If we only want active count
+        if (countDeleted !== 'true') {
+            return res.json({ 
+                status: "SUCCESS", 
+                data: { 
+                    active: activeCount
+                }
+            });
+        }
+        
+        // If we want all stats
+        const deletedCount = await Product.countDocuments({ deletedAt: { $ne: 0 } });
+        const totalCount = activeCount + deletedCount;
+        
+        // Get count by categories
+        const categoryCounts = await Product.aggregate([
+            { $match: { deletedAt: 0 } },
+            { $group: { _id: "$category", count: { $sum: 1 } } },
+            { $lookup: {
+                from: "categories",
+                localField: "_id",
+                foreignField: "_id",
+                as: "categoryInfo"
+            }},
+            { $unwind: "$categoryInfo" },
+            { $project: {
+                _id: 1,
+                count: 1,
+                categoryName: "$categoryInfo.name"
+            }}
+        ]);
+        
+        return res.json({
+            status: "SUCCESS",
+            data: {
+                active: activeCount,
+                deleted: deletedCount,
+                total: totalCount,
+                byCategory: categoryCounts
+            }
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ 
+            status: "FAILED", 
+            message: "Internal server error", 
+            error: err.message 
+        });
+    }
 };
 
 module.exports = {
@@ -293,5 +355,6 @@ module.exports = {
     updateProduct,
     softDeleteProduct,
     restoreProduct,
-    permanentlyDeleteProduct
+    permanentlyDeleteProduct,
+    countProducts
 };

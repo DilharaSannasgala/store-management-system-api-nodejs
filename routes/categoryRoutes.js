@@ -13,6 +13,9 @@ router.get('/all-categories', categoryController.getAllCategories);
 // Optional: Get All Categories including deleted ones (admin only)
 router.get('/all-categories/with-deleted', authMiddleware, categoryController.getAllCategoriesWithDeleted);
 
+// Get Category Count route 
+router.get('/category-count', categoryController.countCategories);
+
 // Get One Category route (only active categories)
 router.get('/:id', categoryController.getCategoryById);
 

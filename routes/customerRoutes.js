@@ -13,6 +13,9 @@ router.get('/all-customers', authMiddleware, customerController.getAllCustomers)
 // Get All Customers including deleted ones
 router.get('/all-customers/with-deleted', authMiddleware, customerController.getAllCustomersWithDeleted);
 
+// Get Customer Count route with authentication
+router.get('/customer-count', authMiddleware, customerController.countCustomers);
+
 // Get One Customer by ID
 router.get('/:id', authMiddleware, customerController.getCustomerById);
 
