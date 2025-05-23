@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 
+// Health check for auth routes
+router.get('/status', (req, res) => {
+    res.json({ status: 'Auth routes operational' });
+});
+
 // Signup route
 router.post('/signup', authController.signup);
 
