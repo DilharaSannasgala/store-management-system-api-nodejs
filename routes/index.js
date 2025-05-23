@@ -25,9 +25,4 @@ module.exports = (app) => {
             userId: req.userId 
         });
     });
-
-        // Add a basic health check route
-    app.get('/', (req, res) => {
-        res.json({ status: 'API is running' });
-    });
 };
