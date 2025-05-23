@@ -8,6 +8,16 @@ const DashboardRouter = require('./dashBoardRoutes');
 const authMiddleware = require('../middleware/auth');
 
 module.exports = (app) => {
+    // Health Check Route
+    app.get('/', (req, res) => {
+        res.json({
+            status: 'SUCCESS',
+            message: 'API is running',
+            timestamp: new Date(),
+            environment: process.env.NODE_ENV || 'development'
+        });
+    });
+
     // API Routes
     app.use('/user', UserRouter);
     app.use('/product', ProductRouter);
