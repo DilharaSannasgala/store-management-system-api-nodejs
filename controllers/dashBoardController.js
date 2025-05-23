@@ -503,7 +503,17 @@ const getDashboardOverview = async (req, res) => {
                 })),
                 recentOrders: recentOrders.map(order => ({
                     id: order._id,
-                    customer: order.customer.name,
+                    customer: {
+                        id: order.customer._id,
+                        firstName: order.customer.firstName,
+                        lastName: order.customer.lastName,
+                        name: `${order.customer.firstName} ${order.customer.lastName}`,
+                        email: order.customer.email,
+                        phone: order.customer.phone,
+                        address: order.customer.address,
+                        city: order.customer.city,
+                        state: order.customer.state
+                    },
                     date: order.createdAt,
                     amount: order.totalAmount,
                     status: order.status
